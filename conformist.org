@@ -1,0 +1,168 @@
+#+title: «Conformist» pattern matching library
+#+author: Centrix14
+#+startup: overview
+
+* What is it for?
+Initially, i developed =conformist= as a component of =calg= — my CAS. This library provides function =matchp=, that returns =t= if given =data= matches =pattern= (=nil= otherwise).
+
+* Syntax of =matchp
+=matchp= takes pattern as first argument and data for matching as second. Pattern can contain:
+1. Placeholders a special /keywords/, that describes type of symbol(s), that must be in the on position of placeholder. There are following placeholders:
+   - =:symbol= describes one symbol
+   - =:list= describes one list
+   - =:symbols= describes one or more symbols
+   - =:lists= describes one or more lists
+   - =:etc= describes one or more symbols or lists
+2. Concrete values.
+
+* =conformist= system
+Nothing interesting here at all.
+
+#+begin_src lisp :tangle conformist.asd
+  (defsystem "conformist"
+    :description "conformist is a pattern matching library"
+    :version "0.1"
+    :author "Centrix14"
+    :license "GNU GPL v3"
+    :depends-on (:asdf)
+    :components ((:file "conformist")))
+#+end_src
+
+* =:conformist= package
+Just a package description
+
+#+begin_src lisp :tangle conformist.lisp
+  (defpackage :conformist
+    (:use :common-lisp))
+#+end_src
+
+* Placeholders
+As i already said =matchp= works with placeholders. Variable =*placeholders*= contains list of placeholders, that =matchp= will recognize.
+
+#+begin_src lisp :tangle conformist.lisp
+  (in-package :conformist)
+
+  (defvar *placeholders* (list :symbol :list))
+#+end_src
+
+=placeholderp= is a predicate that returns =t= if given value is a placeholder.
+
+#+begin_src lisp :tangle conformist.lisp
+  (defun placeholderp (data)
+    (member data *placeholders*))
+#+end_src
+
+Ok, now we have basics of placeholders and can write a function that compares some data with given placeholder (we suppose that given =placeholder= is a real placeholder).
+
+#+begin_src lisp :tangle conformist.lisp
+  (defun does-placeholder-matches-data (placeholder data)
+    (cond
+      ((eql placeholder :symbol)
+       (symbolp data))
+      ((eql placeholder :list)
+       (listp data))))
+#+end_src
+
+If you ask me, why this code so simple and not flexible, i give an answer: this is a temporary solution, soon i will make it more complicated.
+
+* Matching
+Well, now we can +take chance on me+ (sorry for ABBA-speaking). Now we can describe matching mechanism. Here, we begin from the most simple function, that returns =t=, if some symbol =a= matches another symbol =b=.
+
+#+begin_src lisp :tangle conformist.lisp
+  (in-package :conformist)
+
+  (defun does-a-matches-b (a b)
+    (if (placeholderp a)
+        (does-placeholder-matches-data a b)
+      (equal a b)))
+#+end_src
+
+As you can see this function uses =does-placeholder-matches-data= function of =a= is a placeholder, or just returns equivalence of symbols.
+
+#+begin_comment
+In this function i use =equal= because given data may be lists, and =(eql '(1 2 3) '(1 2 3))= is not =t=.
+#+end_comment
+
+Since this solution is temporary, i separated safe and unsafe version of =matchp=, here is a unsafe version (works not correctly when pattern and data has different length).
+
+#+begin_src lisp :tangle conformist.lisp
+  (defun matchp-not-safe (pattern data)
+    (if (null pattern)
+        t
+        (let ((pattern-elm (car pattern))
+              (data-elm (car data)))
+         (if (listp pattern-elm)
+             (and (matchp-not-safe pattern-elm data-elm)
+                  (matchp-not-safe (cdr pattern) (cdr data)))
+             (and (does-a-matches-b pattern-elm data-elm)
+                  (matchp-not-safe (cdr pattern) (cdr data)))))))
+#+end_src
+
+At least, i define =matchp= function, as a safe version of unsafe =mathcp=.
+
+#+begin_src lisp :tangle conformist.lisp
+  (defun matchp (pattern data)
+    (if (= (length pattern)
+           (length data))
+        (matchp-not-safe pattern data)
+        nil))
+#+end_src
+
+* Examples
+Current version of =matchp= is very simple. Here is an examples of usage (all of them returns =t=).
+
+#+begin_src lisp :tangle example.lisp
+  ;; :list placeholder describes list
+  (matchp '(:list) '((1 2 3)))
+
+  ;; :symbol placeholder describes one symbol
+  (matchp '(:symbol) '(a))
+
+  ;; :etc placeholder describes one and more symbols
+  (matchp '(:etc) '(a b c))
+
+  ;; placeholders may be nested
+  (matchp '(:symbol (:symbol :list)) '(a (b (c d))))
+
+  ;; you can mix placeholders and values
+  (matchp '(a :symbol (b :list c)) '(a / (b (1 2 3) c)))
+
+  (:symbol (:symbol :lists))
+  (a (b (1 2 3) (4 5 6)))
+#+end_src
+
+* TODO [0/3]
+- [ ] Add =:lists=, =:symbols= and =:etc= placeholders
+- [ ] Reduce recursion
+- [ ] Add grouping
+
+* Thoughts
+How grouping must work? Generally, grouping provide a new list, that can be one-to-one matched to given.
+
+Some examples.
+
+#+begin_example
+  Pattern:  (:symbol :symbol)
+  Data:     (a b)
+  Grouping: ((a) (b))
+
+  Pattern:  (:list :list)
+  Data:     ((1 2 3) (a b c))
+  Grouping: (((1 2 3)) ((a b c)))
+
+  Pattern:  (:symbol :list)
+  Data:     (a (1 2 3))
+  Grouping: ((a) ((1 2 3)))
+
+  Pattern:  (:symbols)
+  Data:     (a b c)
+  Grouping: ((a b c))
+
+  Pattern:  (:lists)
+  Data:     ((1 2 3) (4 5 6))
+  Grouping: (((1 2 3) (4 5 6)))
+
+  Pattern:  (:symbols :lists)
+  Data:     (a b c (1 2 3) (4 5 6))
+  Grouping: ((a b c) ((1 2 3) (4 5 6)))
+#+end_example
