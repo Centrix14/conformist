@@ -1,3 +1,7 @@
+# Local Variables:
+# eval: (ispell-change-dictionary "english")
+# End:
+
 #+title: «Conformist» pattern matching library
 #+author: Centrix14
 #+startup: overview
@@ -37,30 +41,62 @@ Just a package description
 #+end_src
 
 * Placeholders
-As i already said =matchp= works with placeholders. Variable =*placeholders*= contains list of placeholders, that =matchp= will recognize.
+As i already said =matchp= works with placeholders. =*placeholders*= is a hash table where key is a placeholder and value is a predicate that returns =t= if his argument matches placeholder.
 
 #+begin_src lisp :tangle conformist.lisp
   (in-package :conformist)
 
-  (defvar *placeholders* (list :symbol :list))
+  (defvar *placeholders* (make-hash-table :test #'equal))
+#+end_src
+
+I think that user mustn't work with =*placeholders*= directly, so i give him a corresponding function.
+
+#+begin_src lisp :tangle conformist.lisp
+  (defun define-placeholder (placeholder recognition-predicate)
+    (if (gethash placeholder *placeholders*)
+        (format t "You try to redefine an existing placeholder~%")
+        (setf (gethash placeholder *placeholders*) recognition-predicate)))
+#+end_src
+
+Since we can add placeholders, we can remove them. This functionality provided by =remove-placeholder=.
+
+#+begin_src lisp :tangle conformist.lisp
+  (defun remove-placeholder (placeholder)
+    (if (gethash placeholder *placeholders*)
+        (remhash placeholder *placeholders*)
+        (format t "You try to remove unexisting placeholder~%")))
+#+end_src
+
+Also we can redefine placeholders, so =redefine-placeholder= do it.
+
+#+begin_src lisp :tangle conformist.lisp
+  (defun redefine-placeholder (placeholder recognition-predicate)
+    (if (gethash placeholder *placeholders*)
+        (setf (gethash placeholder *placeholders*) recognition-predicate)
+        (format t "You try to redefine unexisting placeholder~%")))
+#+end_src
+
+At least let's write function that will return predicate function for placeholder.
+
+#+begin_src lisp :tangle conformist.lisp
+  (defun get-placeholder-predicate (placeholder)
+    (values (gethash placeholder *placeholders*) placeholder))
 #+end_src
 
 =placeholderp= is a predicate that returns =t= if given value is a placeholder.
 
 #+begin_src lisp :tangle conformist.lisp
   (defun placeholderp (data)
-    (member data *placeholders*))
+    (if (gethash data *placeholders*)
+        t
+        nil))
 #+end_src
 
 Ok, now we have basics of placeholders and can write a function that compares some data with given placeholder (we suppose that given =placeholder= is a real placeholder).
 
 #+begin_src lisp :tangle conformist.lisp
   (defun does-placeholder-matches-data (placeholder data)
-    (cond
-      ((eql placeholder :symbol)
-       (symbolp data))
-      ((eql placeholder :list)
-       (listp data))))
+    (funcall (get-placeholder-predicate placeholder) data))
 #+end_src
 
 If you ask me, why this code so simple and not flexible, i give an answer: this is a temporary solution, soon i will make it more complicated.
@@ -109,6 +145,12 @@ At least, i define =matchp= function, as a safe version of unsafe =mathcp=.
 #+end_src
 
 * Examples
+Before we can use matching, we must add placeholders and function for them.
+
+#+begin_src lisp :tangle example.lisp
+  (map nil #'define-placeholder (list :symbol :list) (list #'symbolp #'listp))
+#+end_src
+
 Current version of =matchp= is very simple. Here is an examples of usage (all of them returns =t=).
 
 #+begin_src lisp :tangle example.lisp
@@ -131,7 +173,10 @@ Current version of =matchp= is very simple. Here is an examples of usage (all of
   (a (b (1 2 3) (4 5 6)))
 #+end_src
 
-* TODO [0/3]
+* TODO [1/6]
+- [X] Make =*placeholders*= hash table
+- [ ] Separate system to different files
+- [ ] Add classes
 - [ ] Add =:lists=, =:symbols= and =:etc= placeholders
 - [ ] Reduce recursion
 - [ ] Add grouping
@@ -166,3 +211,4 @@ Some examples.
   Data:     (a b c (1 2 3) (4 5 6))
   Grouping: ((a b c) ((1 2 3) (4 5 6)))
 #+end_example
+
