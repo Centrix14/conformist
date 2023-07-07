@@ -1,6 +1,4 @@
-# Local Variables:
-# eval: (ispell-change-dictionary "english")
-# End:
+-*- eval: (ispell-change-dictionary "english") -*-
 
 #+title: «Conformist» pattern matching library
 #+author: Centrix14
@@ -49,7 +47,8 @@ Just a package description
 
 #+begin_src lisp :tangle conformist.lisp
   (defpackage :conformist
-    (:use :common-lisp))
+    (:use :common-lisp)
+    (:export :matchp))
 #+end_src
 
 * Placeholders
@@ -131,19 +130,27 @@ As you can see this function uses =does-placeholder-matches-data= function of =a
 In this function i use =equal= because given data may be lists, and =(eql '(1 2 3) '(1 2 3))= is not =t=.
 #+end_comment
 
-Since this solution is temporary, i separated safe and unsafe version of =matchp=, here is a unsafe version (works not correctly when pattern and data has different length).
+Following code is quite ugly but this version is much faster and more lightweight. It's not the edge of optimization, but closer to it than previous code.
 
 #+begin_src lisp :tangle conformist.lisp
   (defun matchp-not-safe (pattern data)
-    (if (null pattern)
-        t
-        (let ((pattern-elm (car pattern))
-              (data-elm (car data)))
-         (if (listp pattern-elm)
-             (and (matchp-not-safe pattern-elm data-elm)
-                  (matchp-not-safe (cdr pattern) (cdr data)))
-             (and (does-a-matches-b pattern-elm data-elm)
-                  (matchp-not-safe (cdr pattern) (cdr data)))))))
+    (let ((pattern-index 0)
+          (data-index 0)
+          (pattern-len (length pattern))
+          (data-len (length data)))
+      (loop while (and (< pattern-index pattern-len)
+                       (< data-index data-len))
+            do
+            (let ((pattern-elm (elt pattern pattern-index))
+                  (data-elm (elt data data-index)))
+              (if (listp pattern-elm)
+                  (unless (matchp-not-safe pattern-elm data-elm)
+                    (return-from matchp-not-safe nil))
+                  (unless (does-a-matches-b pattern-elm data-elm)
+                    (return-from matchp-not-safe nil)))
+              (incf pattern-index)
+              (incf data-index)))
+      t))
 #+end_src
 
 At least, i define =matchp= function, as a safe version of unsafe =mathcp=.
