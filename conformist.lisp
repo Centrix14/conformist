@@ -1,5 +1,6 @@
 (defpackage :conformist
-  (:use :common-lisp))
+  (:use :common-lisp)
+  (:export :matchp))
 
 (in-package :conformist)
 
@@ -39,15 +40,23 @@
     (equal a b)))
 
 (defun matchp-not-safe (pattern data)
-  (if (null pattern)
-      t
-      (let ((pattern-elm (car pattern))
-            (data-elm (car data)))
-       (if (listp pattern-elm)
-           (and (matchp-not-safe pattern-elm data-elm)
-                (matchp-not-safe (cdr pattern) (cdr data)))
-           (and (does-a-matches-b pattern-elm data-elm)
-                (matchp-not-safe (cdr pattern) (cdr data)))))))
+  (let ((pattern-index 0)
+        (data-index 0)
+        (pattern-len (length pattern))
+        (data-len (length data)))
+    (loop while (and (< pattern-index pattern-len)
+                     (< data-index data-len))
+          do
+          (let ((pattern-elm (elt pattern pattern-index))
+                (data-elm (elt data data-index)))
+            (if (listp pattern-elm)
+                (unless (matchp-not-safe pattern-elm data-elm)
+                  (return-from matchp-not-safe nil))
+                (unless (does-a-matches-b pattern-elm data-elm)
+                  (return-from matchp-not-safe nil)))
+            (incf pattern-index)
+            (incf data-index)))
+    t))
 
 (defun matchp (pattern data)
   (if (= (length pattern)
