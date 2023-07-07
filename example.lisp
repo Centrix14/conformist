@@ -1,3 +1,5 @@
+(map nil #'define-placeholder (list :symbol :list) (list #'symbolp #'listp))
+
 ;; :list placeholder describes list
 (matchp '(:list) '((1 2 3)))
 
@@ -12,3 +14,6 @@
 
 ;; you can mix placeholders and values
 (matchp '(a :symbol (b :list c)) '(a / (b (1 2 3) c)))
+
+(:symbol (:symbol :lists))
+(a (b (1 2 3) (4 5 6)))
