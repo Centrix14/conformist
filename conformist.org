@@ -7,7 +7,19 @@
 #+startup: overview
 
 * What is it for?
-Initially, i developed =conformist= as a component of =calg= — my CAS. This library provides function =matchp=, that returns =t= if given =data= matches =pattern= (=nil= otherwise).
+#+begin_src markdown :tangle README.md
+  # Conformist
+  Conformist is a pattern matching library, that i started as a part of my CAS.
+
+  # Features
+  As a real programmer i don't present realized features, i speaking about my plans.
+  1. Pattern matching for S-expression with placeholders, like `:symbol`, `:list` and another.
+  2. Flexible system of placeholders.
+  3. Pattern grouping (see chapter "thoughts" in org-file).
+
+  # What i have at the time?
+  Very simple library, but soon i will expand it.
+#+end_src
 
 * Syntax of =matchp
 =matchp= takes pattern as first argument and data for matching as second. Pattern can contain:
@@ -173,9 +185,10 @@ Current version of =matchp= is very simple. Here is an examples of usage (all of
   (a (b (1 2 3) (4 5 6)))
 #+end_src
 
-* TODO [1/6]
+* TODO [1/7]
 - [X] Make =*placeholders*= hash table
 - [ ] Separate system to different files
+- [ ] Add error system
 - [ ] Add classes
 - [ ] Add =:lists=, =:symbols= and =:etc= placeholders
 - [ ] Reduce recursion
