@@ -41,10 +41,8 @@ Nothing interesting here at all.
     :depends-on (:asdf)
     :components ((:file "placeholders")
                  (:file "matching")
-                 (:file "util")
                  (:file "conformist" :depends-on ("placeholders"
-                                                  "matching"
-                                                  "util"))))
+                                                  "matching"))))
 #+end_src
 
 * =:conformist= package
@@ -190,12 +188,6 @@ At least, i define =matchp= function, as a safe version of unsafe =mathcp=.
            (length data))
         (matchp-not-safe pattern data)
         nil))
-#+end_src
-
-* Utilities
-#+begin_src lisp :tangle util.lisp
-  (defmacro inc (var &optional (delta 1))
-    `(setf ,var (+ ,var ,delta)))
 #+end_src
 
 * Examples
