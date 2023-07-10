@@ -52,7 +52,12 @@ Just a package description
 #+end_src
 
 * Placeholders
-As i already said =matchp= works with placeholders. =*placeholders*= is a hash table where key is a placeholder and value is a predicate that returns =t= if his argument matches placeholder.
+** Basics
+As i already said =matchp= works with placeholders. Placeholder has to characteristics:
+- Recognition predicate a function that returns =t= if her argument matched specified placeholder.
+- Shift function is a function that returns number of elements that must be skipped in given sequence.
+
+Recognition predicate and shift function stored in list that is a value for placeholder key.
 
 #+begin_src lisp :tangle conformist.lisp
   (in-package :conformist)
@@ -60,13 +65,15 @@ As i already said =matchp= works with placeholders. =*placeholders*= is a hash t
   (defvar *placeholders* (make-hash-table :test #'equal))
 #+end_src
 
+** Placeholders: create, change and remove
 I think that user mustn't work with =*placeholders*= directly, so i give him a corresponding function.
 
 #+begin_src lisp :tangle conformist.lisp
-  (defun define-placeholder (placeholder recognition-predicate)
+  (defun define-placeholder (placeholder recognition-predicate shift-function)
     (if (gethash placeholder *placeholders*)
         (format t "You try to redefine an existing placeholder~%")
-        (setf (gethash placeholder *placeholders*) recognition-predicate)))
+        (setf (gethash placeholder *placeholders*) (list recognition-predicate
+                                                         shift-function))))
 #+end_src
 
 Since we can add placeholders, we can remove them. This functionality provided by =remove-placeholder=.
@@ -81,19 +88,31 @@ Since we can add placeholders, we can remove them. This functionality provided b
 Also we can redefine placeholders, so =redefine-placeholder= do it.
 
 #+begin_src lisp :tangle conformist.lisp
-  (defun redefine-placeholder (placeholder recognition-predicate)
+  (defun redefine-placeholder (placeholder recognition-predicate shift-function)
     (if (gethash placeholder *placeholders*)
-        (setf (gethash placeholder *placeholders*) recognition-predicate)
+        (setf (gethash placeholder *placeholders*) (list recognition-predicate
+                                                         shift-function))
         (format t "You try to redefine unexisting placeholder~%")))
 #+end_src
 
-At least let's write function that will return predicate function for placeholder.
+** Accessors
+All placeholders logic is implemented, but for further work we need some access functions.
+
+First function in this group is a =get-recognition-predicate=, that returns recognition predicate for given placeholder.
 
 #+begin_src lisp :tangle conformist.lisp
-  (defun get-placeholder-predicate (placeholder)
-    (values (gethash placeholder *placeholders*) placeholder))
+  (defun get-recognition-predicate (placeholder)
+    (values (first (gethash placeholder *placeholders*)) placeholder))
 #+end_src
 
+Another function is =get-shift-function= and i think there is no need in any other words about it.
+
+#+begin_src lisp :tangle conformist.lisp
+  (defun get-shift-function (placeholder)
+    (values (second (gethash placeholder *placeholders*)) placeholder))
+#+end_src
+
+** Predicates
 =placeholderp= is a predicate that returns =t= if given value is a placeholder.
 
 #+begin_src lisp :tangle conformist.lisp
@@ -107,7 +126,7 @@ Ok, now we have basics of placeholders and can write a function that compares so
 
 #+begin_src lisp :tangle conformist.lisp
   (defun does-placeholder-matches-data (placeholder data)
-    (funcall (get-placeholder-predicate placeholder) data))
+    (funcall (get-recognition-predicate placeholder) data))
 #+end_src
 
 If you ask me, why this code so simple and not flexible, i give an answer: this is a temporary solution, soon i will make it more complicated.
@@ -148,8 +167,10 @@ Following code is quite ugly but this version is much faster and more lightweigh
                     (return-from matchp-not-safe nil))
                   (unless (does-a-matches-b pattern-elm data-elm)
                     (return-from matchp-not-safe nil)))
-              (incf pattern-index)
-              (incf data-index)))
+              (inc data-index (funcall (get-shift-function pattern-elm)
+                                       data
+                                       pattern-index))
+              (incf pattern-index)))
       t))
 #+end_src
 
@@ -163,11 +184,25 @@ At least, i define =matchp= function, as a safe version of unsafe =mathcp=.
         nil))
 #+end_src
 
+* Utilities
+#+begin_src lisp :tangle conformist.lisp
+  (defmacro inc (var &optional (delta 1))
+    `(setf ,var (+ ,var ,delta)))
+#+end_src
+
 * Examples
 Before we can use matching, we must add placeholders and function for them.
 
 #+begin_src lisp :tangle example.lisp
-  (map nil #'define-placeholder (list :symbol :list) (list #'symbolp #'listp))
+  (defun skip-one (data index)
+    (declare (ignore data))
+    (declare (ignore index))
+    1)
+
+  (map nil #'define-placeholder
+       (list :symbol :list)
+       (list #'symbolp #'listp)
+       (list #'skip-one #'skip-one))
 #+end_src
 
 Current version of =matchp= is very simple. Here is an examples of usage (all of them returns =t=).
