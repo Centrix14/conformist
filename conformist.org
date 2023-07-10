@@ -21,13 +21,10 @@
 
 * Syntax of =matchp
 =matchp= takes pattern as first argument and data for matching as second. Pattern can contain:
-1. Placeholders a special /keywords/, that describes type of symbol(s), that must be in the on position of placeholder. There are following placeholders:
-   - =:symbol= describes one symbol
-   - =:list= describes one list
-   - =:symbols= describes one or more symbols
-   - =:lists= describes one or more lists
-   - =:etc= describes one or more symbols or lists
+1. Placeholders a special /keywords/, that describes type of symbol(s), that must be in the on position of placeholder.
 2. Concrete values.
+
+conformist don't have built-in placeholders collection, you can define it on your own.
 
 * =conformist= system
 Nothing interesting here at all.
@@ -191,6 +188,23 @@ At least, i define =matchp= function, as a safe version of unsafe =mathcp=.
 #+end_src
 
 * Examples
+** Examples system
+#+begin_src lisp :tangle examples.asd
+  (defsystem "examples"
+    :description "Examples for conformist library"
+    :depends-on (:asdf)
+    :components ((:file "examples")))
+#+end_src
+
+** Examples package
+#+begin_src lisp :tangle examples.lisp
+  (defpackage :conformist-examples
+    (:use :common-lisp :conformist))
+
+  (in-package :conformist-examples)
+#+end_src
+
+** Examples it self
 Before we can use matching, we must add placeholders and function for them.
 
 #+begin_src lisp :tangle example.lisp
@@ -227,14 +241,15 @@ Current version of =matchp= is very simple. Here is an examples of usage (all of
   (a (b (1 2 3) (4 5 6)))
 #+end_src
 
-* TODO [1/7]
+* TODO [3/8]
 - [X] Make =*placeholders*= hash table
-- [ ] Separate system to different files
+- [X] Separate system to different files
 - [ ] Add error system
 - [ ] Add classes
 - [ ] Add =:lists=, =:symbols= and =:etc= placeholders
-- [ ] Reduce recursion
+- [X] Reduce recursion
 - [ ] Add grouping
+- [ ] Expand examples
 
 * Thoughts
 How grouping must work? Generally, grouping provide a new list, that can be one-to-one matched to given.
