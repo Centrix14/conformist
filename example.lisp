@@ -1,4 +1,12 @@
-(map nil #'define-placeholder (list :symbol :list) (list #'symbolp #'listp))
+(defun skip-one (data index)
+  (declare (ignore data))
+  (declare (ignore index))
+  1)
+
+(map nil #'define-placeholder
+     (list :symbol :list)
+     (list #'symbolp #'listp)
+     (list #'skip-one #'skip-one))
 
 ;; :list placeholder describes list
 (matchp '(:list) '((1 2 3)))
