@@ -1,0 +1,33 @@
+(in-package :conformist)
+
+(defun does-a-matches-b (a b)
+  (if (placeholderp a)
+      (does-placeholder-matches-data a b)
+    (equal a b)))
+
+(defun matchp-not-safe (pattern data)
+  (let ((pattern-index 0)
+        (data-index 0)
+        (pattern-len (length pattern))
+        (data-len (length data)))
+    (loop while (and (< pattern-index pattern-len)
+                     (< data-index data-len))
+          do
+             (let ((pattern-elm (elt pattern pattern-index))
+                   (data-elm (elt data data-index)))
+               (if (listp pattern-elm)
+                   (unless (matchp-not-safe pattern-elm data-elm)
+                     (return-from matchp-not-safe nil))
+                   (unless (does-a-matches-b pattern-elm data-elm)
+                     (return-from matchp-not-safe nil)))
+               (incf data-index (funcall (get-shift-function pattern-elm)
+                                         data
+                                         pattern-index))
+               (incf pattern-index)))
+    t))
+
+(defun matchp (pattern data)
+  (if (= (length pattern)
+         (length data))
+      (matchp-not-safe pattern data)
+      nil))
