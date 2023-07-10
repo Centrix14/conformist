@@ -4,4 +4,7 @@
   :author "Centrix14"
   :license "GNU GPL v3"
   :depends-on (:asdf)
-  :components ((:file "conformist")))
+  :components ((:file "placeholders")
+               (:file "matching")
+               (:file "conformist" :depends-on ("placeholders"
+                                                "matching"))))
