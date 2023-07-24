@@ -36,19 +36,36 @@ Nothing interesting here at all.
     :author "Centrix14"
     :license "GNU GPL v3"
     :depends-on (:asdf)
-    :components ((:file "placeholders")
-                 (:file "matching")
-                 (:file "conformist" :depends-on ("placeholders"
-                                                  "matching"))))
+    :components ((:file "conformist")
+                 (:file "placeholders" :depends-on ("conformist"))
+                 (:file "matching" :depends-on ("conformist"))
+                 ))
+
+  (defsystem "conformist/examples"
+    :description "Examples for conformist library"
+    :depends-on (:asdf :conformist)
+    :components ((:file "examples")))
 #+end_src
 
 * =:conformist= package
-Just a package description
+Just a package description.
 
 #+begin_src lisp :tangle conformist.lisp
   (defpackage :conformist
     (:use :common-lisp)
-    (:export :matchp))
+    (:export :matchp
+             :placeholderp
+             :define-placeholder
+             :redefine-placeholder
+             :remove-placeholder
+             :get-recognition-predicate
+             :get-shift-function
+             :*placeholders*))
+#+end_src
+
+#+begin_src lisp :tangle conformist.lisp
+  (defpackage :conformist-examples
+    (:use :common-lisp :conformist))
 #+end_src
 
 * Placeholders
@@ -139,6 +156,7 @@ Well, now we can +take chance on me+ (sorry for ABBA-speaking). Now we can descr
   (in-package :conformist)
 
   (defun does-a-matches-b (a b)
+    (format t "~a ~a~%" a b)
     (if (placeholderp a)
         (does-placeholder-matches-data a b)
       (equal a b)))
@@ -154,7 +172,7 @@ In this function i use =equal= because given data may be lists, and =(eql '(1 2 
 Following code is quite ugly but this version is much faster and more lightweight. It's not the edge of optimization, but closer to it than previous code.
 
 #+begin_src lisp :tangle matching.lisp
-  (defun matchp-not-safe (pattern data)
+  (defun matchp-unsafe (pattern data)
     (let ((pattern-index 0)
           (data-index 0)
           (pattern-len (length pattern))
@@ -164,14 +182,18 @@ Following code is quite ugly but this version is much faster and more lightweigh
             do
                (let ((pattern-elm (elt pattern pattern-index))
                      (data-elm (elt data data-index)))
+
                  (if (listp pattern-elm)
-                     (unless (matchp-not-safe pattern-elm data-elm)
-                       (return-from matchp-not-safe nil))
+                     (unless (matchp-unsafe pattern-elm data-elm)
+                       (return-from matchp-unsafe nil))
                      (unless (does-a-matches-b pattern-elm data-elm)
-                       (return-from matchp-not-safe nil)))
-                 (incf data-index (funcall (get-shift-function pattern-elm)
-                                           data
-                                           pattern-index))
+                       (return-from matchp-unsafe nil)))
+
+                 (if (placeholderp pattern-elm)
+                     (setf data-index (funcall (get-shift-function pattern-elm)
+                                                 data
+                                                 data-index))
+                     (incf data-index))
                  (incf pattern-index)))
       t))
 #+end_src
@@ -181,64 +203,73 @@ At least, i define =matchp= function, as a safe version of unsafe =mathcp=.
 
 #+begin_src lisp :tangle matching.lisp
   (defun matchp (pattern data)
-    (if (= (length pattern)
-           (length data))
-        (matchp-not-safe pattern data)
-        nil))
+    (if (and (listp pattern)
+             (listp data))
+        (matchp-unsafe pattern data)))
 #+end_src
 
 * Examples
-** Examples system
-#+begin_src lisp :tangle examples.asd
-  (defsystem "examples"
-    :description "Examples for conformist library"
-    :depends-on (:asdf)
-    :components ((:file "examples")))
-#+end_src
-
-** Examples package
-#+begin_src lisp :tangle examples.lisp
-  (defpackage :conformist-examples
-    (:use :common-lisp :conformist))
-
-  (in-package :conformist-examples)
-#+end_src
-
 ** Examples it self
 Before we can use matching, we must add placeholders and function for them.
 
-#+begin_src lisp :tangle example.lisp
+#+begin_src lisp :tangle examples.lisp
+  (in-package :conformist-examples)
+
   (defun skip-one (data index)
     (declare (ignore data))
-    (declare (ignore index))
-    1)
+    (1+ index))
 
-  (map nil #'define-placeholder
-       (list :symbol :list)
-       (list #'symbolp #'listp)
-       (list #'skip-one #'skip-one))
+  (defun skip-symbols (data index)
+    (format t "index: ~a~%" index)
+    (let ((elm (elt data index)))
+      (loop while (< index (length data)) do
+        (unless (symbolp elm)
+          (return-from skip-symbols index))
+        (setf elm (elt data index))
+        (incf index)))
+    (format t "skip: ~a~%" (1- index))
+    (1- index))
+
+  (defun add-placeholders ()
+    (map nil #'define-placeholder
+         (list :symbol :list :symbols)
+         (list #'symbolp #'listp #'symbolp)
+         (list #'skip-one #'skip-one #'skip-symbols)))
+
+  (defun remove-placeholders ()
+    (maphash (lambda (key value)
+               (declare (ignore value))
+               (remhash key *placeholders*))
+             ,*placeholders*))
 #+end_src
 
 Current version of =matchp= is very simple. Here is an examples of usage (all of them returns =t=).
 
-#+begin_src lisp :tangle example.lisp
-  ;; :list placeholder describes list
-  (matchp '(:list) '((1 2 3)))
+#+begin_src lisp :tangle examples.lisp
+  (defun test1 ()
+    (values
+     ;; :list placeholder describes list
+     (matchp '(:list) '((1 2 3)))
 
-  ;; :symbol placeholder describes one symbol
-  (matchp '(:symbol) '(a))
+     ;; :symbol placeholder describes one symbol
+     (matchp '(:symbol) '(a))
 
-  ;; :etc placeholder describes one and more symbols
-  (matchp '(:etc) '(a b c))
+     ;; placeholders may be nested
+     (matchp '(:symbol (:symbol :list)) '(a (b (c d))))
 
-  ;; placeholders may be nested
-  (matchp '(:symbol (:symbol :list)) '(a (b (c d))))
+     ;; you can mix placeholders and values
+     (matchp '(a :symbol (b :list c)) '(a / (b (1 2 3) c)))))
 
-  ;; you can mix placeholders and values
-  (matchp '(a :symbol (b :list c)) '(a / (b (1 2 3) c)))
+  ;; :symbols placeholder describes one or more symbols
+  (defun test2 ()
+    (matchp '(a :symbols) '(a b c d)))
+#+end_src
 
-  (:symbol (:symbol :lists))
-  (a (b (1 2 3) (4 5 6)))
+#+begin_src lisp :tangle examples.lisp
+  (defun make-tests ()
+    (add-placeholders)
+    (test1)
+    )
 #+end_src
 
 * TODO [3/8]
