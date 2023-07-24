@@ -4,7 +4,12 @@
   :author "Centrix14"
   :license "GNU GPL v3"
   :depends-on (:asdf)
-  :components ((:file "placeholders")
-               (:file "matching")
-               (:file "conformist" :depends-on ("placeholders"
-                                                "matching"))))
+  :components ((:file "conformist")
+               (:file "placeholders" :depends-on ("conformist"))
+               (:file "matching" :depends-on ("conformist"))
+               ))
+
+(defsystem "conformist/examples"
+  :description "Examples for conformist library"
+  :depends-on (:asdf :conformist)
+  :components ((:file "examples")))
