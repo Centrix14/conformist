@@ -81,6 +81,22 @@
     
     groups))
 
+(defun corrector (pattern data lore)
+  (when (< (length data)
+           (length pattern))
+    (return-from corrector +not-matches+))
+
+  (destructuring-bind (collection schizoid)))
+
+;; lore = corrector, collection, schizoid
+(defun shipper (pattern data &optional lore)
+  (funcall (car lore) pattern data (cdr lore)))
+
+(shipper '(a :symbol b) '(a c b)
+         '(corrector conformist-collection
+           schizoid does-a-matches-b
+           simplep match-complex-placeholder))
+
 (defun matchp (pattern data)
   (when (< (length data)
            (length pattern))

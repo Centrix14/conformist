@@ -4,20 +4,17 @@
 #+author: Centrix14
 #+startup: overview
 
-* What is it for?
-#+begin_src markdown :tangle README.md
-  # Conformist
-  Conformist is a pattern matching library, that i started as a part of my CAS.
+* About
+Conformist is a pattern matching library, that i started as a part of my CAS.
 
-  # Features
-  As a real programmer i don't present realized features, i speaking about my plans.
-  1. Pattern matching for S-expression with placeholders, like `:symbol`, `:list` and another.
-  2. Flexible system of placeholders.
-  3. Pattern grouping (see chapter "thoughts" in org-file).
+** Features
+As a real programmer i don't present realized features, i speaking about my plans.
+1. Pattern matching for S-expression with placeholders, like `:symbol`, `:list` and another.
+2. Flexible system of placeholders.
+3. Pattern grouping (see chapter "thoughts" in org-file).
 
-  # What i have at the time?
-  Very simple library, but soon i will expand it.
-#+end_src
+** What i have at the time?
+Very simple library, but soon i will expand it.
 
 * Syntax of =matchp
 =matchp= takes pattern as first argument and data for matching as second. Pattern can contain:
