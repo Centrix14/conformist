@@ -1,25 +1,17 @@
 (defparameter +not-matches+ 'nm)
 
-(defun placeholderp (data)
-  (if (member data '(:symbol :list :symbols :lists))
-      t
-      nil))
+(defmacro create-hash-table (name make-args &rest values)
+  `(progn
+     (defvar ,name (make-hash-table ,@make-args))
 
-(defun simplep (pattern)
-  (if (member pattern '(:symbols :lists))
-      nil
-      t))
+     (loop for pair in ',values do
+       (setf (gethash (first pair) ,name) (second pair)))))
 
-(defun does-placeholder-matches-data (placeholder data)
-  (case placeholder
-    ((:symbol :symbols) (symbolp data))
-    ((:list :lists) (listp data))
-    ))
-
-(defun does-a-matches-b (a b)
-  (if (placeholderp a)
-      (does-placeholder-matches-data a b)
-      (equal a b)))
+(create-hash-table conformist-collection nil
+                   (:symbol (symbolp t))
+                   (:list (listp t))
+                   (:symbols (symbolp nil))
+                   (:lists (listp nil)))
 
 (defun frontier (sequence)
   (1- (length sequence)))
@@ -40,62 +32,96 @@
                     (listify y)))
           sequence))
 
-(defun match-complex-placeholder (data index edge-placeholder)
-  (loop for i from index to (frontier data)
-        while (not (does-a-matches-b edge-placeholder (elt data i)))
-        collect (elt data i)))
+(defun placeholderp (data &optional (collection conformist-collection))
+  (multiple-value-bind (value exists) (gethash data collection)
+    (declare (ignore value))
+    exists))
 
-(defun grouping-matcher (pattern data)
-  (let ((pattern-index 0)
-        (data-index 0)
+(defun does-placeholder-matches-data (placeholder
+                                      data
+                                      &optional (collection
+                                                 conformist-collection))
+  (funcall (first (gethash placeholder collection)) data))
 
-        (edge (min (length pattern)
-                   (length data)))
+(defvar conformist-scales (list #'placeholderp
+                                #'does-placeholder-matches-data
+                                #'equal))
 
-        groups)
-    
-    (loop while (< pattern-index edge) do
-      (let ((wish (elt pattern pattern-index))
-            (reality (elt data data-index)))
+(defun does-a-matches-b (a b &optional (scales conformist-scales))
+  (destructuring-bind (placeholder-predicate
+                       placeholder-matching-predicate
+                       equal-predicate)
+      scales
+    (if (funcall placeholder-predicate a)
+        (funcall placeholder-matching-predicate a b)
+        (funcall equal-predicate a b))))
 
-        (if (and (listp wish)
-                 (listp reality))
-            (unless (grouping-matcher wish reality)
-              (return-from grouping-matcher +not-matches+))
-            (unless (does-a-matches-b wish reality)
-              (return-from grouping-matcher +not-matches+)))
 
-        (when (simplep wish)
-          (push reality groups)
-          (incf data-index))
-        (unless (simplep wish)
-          (let ((matched-group
-                  (match-complex-placeholder data
-                                              data-index
-                                              (elm pattern
-                                                   (1+ pattern-index)))))
-            (push matched-group groups)
-            (incf data-index (length matched-group))))
-        
-        (incf pattern-index)))
-    
-    groups))
+(defvar conformist-matching-kit (list #'does-a-matches-b
+                                      conformist-scales))
 
-(defun corrector (pattern data lore)
-  (when (< (length data)
-           (length pattern))
-    (return-from corrector +not-matches+))
+(defun simplep (data &optional (collection conformist-collection))
+  (second (gethash data collection)))
 
-  (destructuring-bind (collection schizoid)))
+(defun match-complex-placeholder (data index edge-placeholder
+                                  &optional
+                                    (matching-kit conformist-matching-kit))
+  (destructuring-bind (matcher scales) matching-kit
+    (loop for i from index to (frontier data)
+          while (not
+                 (funcall matcher edge-placeholder (elt data i) scales))
+          collect (elt data i))))
 
-;; lore = corrector, collection, schizoid
-(defun shipper (pattern data &optional lore)
-  (funcall (car lore) pattern data (cdr lore)))
+(defvar conformist-lore (list #'simplep
+                              #'match-complex-placeholder
+                              conformist-matching-kit))
 
-(shipper '(a :symbol b) '(a c b)
-         '(corrector conformist-collection
-           schizoid does-a-matches-b
-           simplep match-complex-placeholder))
+(defun eros (pattern data &optional (lore conformist-lore))
+  (destructuring-bind (simple-predicate complex-matcher
+                       matching-kit)
+      lore
+    (let ((pattern-index 0)
+          (data-index 0)
+
+          (edge (min (length pattern)
+                     (length data)))
+
+          (matcher (first matching-kit))
+          (placeholder-predicate (car (car (cdr matching-kit))))
+          
+          groups)
+
+      (loop while (< pattern-index edge) do
+        (let ((wish (elt pattern pattern-index))
+              (reality (elt data data-index)))
+
+          (if (and (listp wish)
+                   (listp reality))
+              (unless (eros wish reality)
+                (return-from eros +not-matches+))
+              (unless (funcall matcher wish reality)
+                (return-from eros +not-matches+)))
+
+          (when (funcall placeholder-predicate wish)
+            (when (funcall simple-predicate wish)
+              (push reality groups)
+              (incf data-index))
+            (unless (funcall simple-predicate wish)
+              (let ((matched-group
+                      (funcall complex-matcher
+                               data
+                               data-index
+                               (elm pattern
+                                    (1+ pattern-index))
+                               matching-kit)))
+                (push matched-group groups)
+                (incf data-index (length matched-group)))))
+          (unless (funcall placeholder-predicate wish)
+            (push reality groups)
+            (incf data-index)))
+          
+        (incf pattern-index))
+      groups)))
 
 (defun matchp (pattern data)
   (when (< (length data)
