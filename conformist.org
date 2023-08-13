@@ -270,34 +270,3 @@ Current version of =matchp= is very simple. Here is an examples of usage (all of
     )
 #+end_src
 
-* Thoughts
-How grouping must work? Generally, grouping provide a new list, that can be one-to-one matched to given.
-
-Some examples.
-
-#+begin_example
-  Pattern:  (:symbol :symbol)
-  Data:     (a b)
-  Grouping: ((a) (b))
-
-  Pattern:  (:list :list)
-  Data:     ((1 2 3) (a b c))
-  Grouping: (((1 2 3)) ((a b c)))
-
-  Pattern:  (:symbol :list)
-  Data:     (a (1 2 3))
-  Grouping: ((a) ((1 2 3)))
-
-  Pattern:  (:symbols)
-  Data:     (a b c)
-  Grouping: ((a b c))
-
-  Pattern:  (:lists)
-  Data:     ((1 2 3) (4 5 6))
-  Grouping: (((1 2 3) (4 5 6)))
-
-  Pattern:  (:symbols :lists)
-  Data:     (a b c (1 2 3) (4 5 6))
-  Grouping: ((a b c) ((1 2 3) (4 5 6)))
-#+end_example
-
