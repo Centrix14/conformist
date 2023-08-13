@@ -1,4 +1,4 @@
-(defparameter +not-matches+ 'nm)
+(defparameter +not-matches+ 'not-matches)
 
 (defmacro create-hash-table (name make-args &rest values)
   `(progn
@@ -32,63 +32,84 @@
                     (listify y)))
           sequence))
 
-(defun placeholderp (data &optional (collection conformist-collection))
-  (multiple-value-bind (value exists) (gethash data collection)
-    (declare (ignore value))
-    exists))
+(defun placeholderp (data pattern-system)
+  (with-slots ((collection placeholders-collection)) pattern-system
+    (multiple-value-bind (value exists) (gethash data collection)
+      (declare (ignore value))
+      exists)))
 
-(defun does-placeholder-matches-data (placeholder
-                                      data
-                                      &optional (collection
-                                                 conformist-collection))
-  (funcall (first (gethash placeholder collection)) data))
+(defun simplep (data pattern-system)
+  (with-slots ((collection placeholders-collection)) pattern-system
+    (second (gethash data collection))))
 
-(defvar conformist-scales (list #'placeholderp
-                                #'does-placeholder-matches-data
-                                #'equal))
+(defun does-placeholder-matches-data (placeholder data pattern-system)
+  (with-slots ((collection placeholders-collection)) pattern-system
+    (funcall (first (gethash placeholder collection)) data)))
 
-(defun does-a-matches-b (a b &optional (scales conformist-scales))
-  (destructuring-bind (placeholder-predicate
-                       placeholder-matching-predicate
-                       equal-predicate)
-      scales
-    (if (funcall placeholder-predicate a)
-        (funcall placeholder-matching-predicate a b)
-        (funcall equal-predicate a b))))
+(defun does-a-matches-b (a b pattern-system)
+  (with-slots (placeholder-predicate data-to-placeholder-matcher) pattern-system
+      (if (funcall placeholder-predicate a pattern-system)
+          (funcall data-to-placeholder-matcher a b pattern-system)
+          (equalp a b))))
 
-
-(defvar conformist-matching-kit (list #'does-a-matches-b
-                                      conformist-scales))
-
-(defun simplep (data &optional (collection conformist-collection))
-  (second (gethash data collection)))
-
-(defun match-complex-placeholder (data index edge-placeholder
-                                  &optional
-                                    (matching-kit conformist-matching-kit))
-  (destructuring-bind (matcher scales) matching-kit
+(defun match-complex-placeholder (data index edge-placeholder pattern-system)
+  (with-slots ((matcher single-values-matcher)) pattern-system
     (loop for i from index to (frontier data)
           while (not
-                 (funcall matcher edge-placeholder (elt data i) scales))
+                 (funcall matcher edge-placeholder (elt data i) pattern-system))
           collect (elt data i))))
 
-(defvar conformist-lore (list #'simplep
-                              #'match-complex-placeholder
-                              conformist-matching-kit))
+(defclass pattern-system ()
+  ((placeholders-collection
+    :initarg :placeholders-collection
+    :initform conformist-collection
+    :documentation "Placeholders collection")
+   
+   (placeholder-predicate
+    :type function
+    :initarg :placeholder-predicate
+    :initform #'placeholderp
+    :documentation "Predicate for placeholder recognition")
 
-(defun eros (pattern data &optional (lore conformist-lore))
-  (destructuring-bind (simple-predicate complex-matcher
-                       matching-kit)
-      lore
+   (simple-placeholder-predicate
+    :type function
+    :initarg :simple-placeholder-predicate
+    :initform #'simplep
+    :documentation "Predicate that recognize simple placeholders")
+
+   (data-to-placeholder-matcher
+    :type function
+    :initarg :data-to-placeholder-matcher
+    :initform #'does-placeholder-matches-data
+    :documentation "Function for matching data to given placeholder")
+
+   (single-values-matcher
+    :type function
+    :initarg :single-values-matcher
+    :initform #'does-a-matches-b
+    :documentation "Function for matching two single values")
+
+   (complex-placeholder-matcher
+    :type function
+    :initarg :complex-placeholder-matcher
+    :initform #'match-complex-placeholder
+    :documentation "Function for matching data to complex placeholder"))
+  
+  (:documentation "Pattern system contains placeholder collection and collection-specific functions"))
+
+(defun compositor (pattern data pattern-system)
+  (with-slots ((simple-predicate simple-placeholder-predicate)
+               (complex-matcher complex-placeholder-matcher)
+               (matcher single-values-matcher)
+               placeholder-predicate)
+      pattern-system
+    
     (let ((pattern-index 0)
           (data-index 0)
 
           (edge (min (length pattern)
                      (length data)))
 
-          (matcher (first matching-kit))
-          (placeholder-predicate (car (car (cdr matching-kit))))
-          
           groups)
 
       (loop while (< pattern-index edge) do
@@ -97,38 +118,40 @@
 
           (if (and (listp wish)
                    (listp reality))
-              (unless (eros wish reality)
-                (return-from eros +not-matches+))
-              (unless (funcall matcher wish reality)
-                (return-from eros +not-matches+)))
+              (unless (compositor wish reality pattern-system)
+                (return-from compositor +not-matches+))
+              (unless (funcall matcher wish reality pattern-system)
+                (return-from compositor +not-matches+)))
 
-          (when (funcall placeholder-predicate wish)
-            (when (funcall simple-predicate wish)
+          (when (funcall placeholder-predicate wish pattern-system)
+            (when (funcall simple-predicate wish pattern-system)
               (push reality groups)
               (incf data-index))
-            (unless (funcall simple-predicate wish)
+            (unless (funcall simple-predicate wish pattern-system)
               (let ((matched-group
                       (funcall complex-matcher
                                data
                                data-index
                                (elm pattern
                                     (1+ pattern-index))
-                               matching-kit)))
+                               pattern-system)))
                 (push matched-group groups)
                 (incf data-index (length matched-group)))))
-          (unless (funcall placeholder-predicate wish)
+          
+          (unless (funcall placeholder-predicate wish pattern-system)
             (push reality groups)
             (incf data-index)))
           
         (incf pattern-index))
+      
       groups)))
 
-(defun matchp (pattern data)
+(defun shipper (pattern data pattern-system)
   (when (< (length data)
            (length pattern))
-    (return-from matchp nil))
+    (return-from shipper nil))
   
-  (let ((raw (grouping-matcher pattern data)))
+  (let ((raw (compositor pattern data pattern-system)))
     (if (eql raw +not-matches+)
         nil
         (let* ((result (reverse raw))
@@ -151,20 +174,20 @@
        test-forms))
 
 (format t "~a~%"
-        (test '((t (matchp '(:list) '((1 2 3))))
-                (t (matchp '(:symbol) '(a)))
-                (t (matchp '(:lists) '((1 2 3) (4 5 6) (7 8 9))))
-                (t (matchp '(:symbols) '(a b c d)))
-                (t (matchp '(:symbols :lists) '(a b c (1 2 3) (4 5 6))))
-                (t (matchp '(:lists :symbols) '((1 2 3) (4 5 6) a b c)))
-                (t (matchp '(:symbol (:symbol)) '(a (b))))
-                (t (matchp '(:symbol (:symbols) :list) '(a (b c d) (e f g h))))
+        (test '((t (shipper '(:list) '((1 2 3))))
+                (t (shipper '(:symbol) '(a)))
+                (t (shipper '(:lists) '((1 2 3) (4 5 6) (7 8 9))))
+                (t (shipper '(:symbols) '(a b c d)))
+                (t (shipper '(:symbols :lists) '(a b c (1 2 3) (4 5 6))))
+                (t (shipper '(:lists :symbols) '((1 2 3) (4 5 6) a b c)))
+                (t (shipper '(:symbol (:symbol)) '(a (b))))
+                (t (shipper '(:symbol (:symbols) :list) '(a (b c d) (e f g h))))
         
-                (nil (matchp '(:list) '(a)))
-                (nil (matchp '(:symbol) '((1 2 3))))
-                (nil (matchp '(:lists) '(a b c)))
-                (nil (matchp '(:symbols) '((1 2 3) (4 5 6))))
-                (nil (matchp '(:symbols :lists) '((1 2 3) a b c)))
-                (nil (matchp '(:lists :symbols) '(a b c (1 2 3))))
-                (nil (matchp '(:symbol (:symbol)) '(a b)))
-                (nil (matchp '(:symbol (:symbols) :list) '(a (b c d) e))))))
+                (nil (shipper '(:list) '(a)))
+                (nil (shipper '(:symbol) '((1 2 3))))
+                (nil (shipper '(:lists) '(a b c)))
+                (nil (shipper '(:symbols) '((1 2 3) (4 5 6))))
+                (nil (shipper '(:symbols :lists) '((1 2 3) a b c)))
+                (nil (shipper '(:lists :symbols) '(a b c (1 2 3))))
+                (nil (shipper '(:symbol (:symbol)) '(a b)))
+                (nil (shipper '(:symbol (:symbols) :list) '(a (b c d) e))))))
