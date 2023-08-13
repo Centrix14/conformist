@@ -47,144 +47,52 @@ Just a package description.
     (:export :pattern-system :shipper))
 #+end_src
 
-* Placeholders
-** Basics
-As i already said =matchp= works with placeholders. Placeholder has to characteristics:
-- Recognition predicate a function that returns =t= if her argument matched specified placeholder.
-- Shift function is a function that returns number of elements that must be skipped in given sequence.
+* Pattern system
+** Placeholders
+Main concept of conformist is a /placeholder/. Placeholder is a _keyword_ that /holds a place/ of some value. Examples: =:symbol :list :string :integer=. Placeholders unite in /patterns/. Example: =a :math-op b= where =a= and =b= is a /concrete values/, =:math-op= — placeholder for mathematical operation (remember that conformist provides only general logic and small standard set of placeholders, =:math-op= is just an example).
 
-Recognition predicate and shift function stored in list that is a value for placeholder key.
+** Pattern system itself
+Since library provides only general logic of pattern matching (and also a standard solution) it needs a flexible mechanism for pattern system realization. =pattern-system= class stores all functions of such pattern system. It has following members:
+- =placeholders-collection= a hashmap where key is a placeholder and value is a list with following structure: =(recognition-predicate is-simple)=. =recognition-predicate= returns =t= if his argument matches placeholder. For example, if placeholder is =:integer= then =recognition-predicate= may be =integerp=. =is-simple= is a logic value where =t= means _simple_ and =nil= means _complex_.
 
-#+begin_src lisp :tangle placeholders.lisp
-  (in-package :conformist)
+#+begin_src lisp :tangle src/pattern-system.lisp
+  (defclass pattern-system ()
+    ((placeholders-collection
+      :initarg :placeholders-collection
+      :initform conformist-collection
+      :documentation "Placeholders collection")
+   
+     (placeholder-predicate
+      :type function
+      :initarg :placeholder-predicate
+      :initform #'placeholderp
+      :documentation "Predicate for placeholder recognition")
 
-  (defvar *placeholders* (make-hash-table :test #'equal))
-#+end_src
+     (simple-placeholder-predicate
+      :type function
+      :initarg :simple-placeholder-predicate
+      :initform #'simplep
+      :documentation "Predicate that recognize simple placeholders")
 
-** Placeholders: create, change and remove
-I think that user mustn't work with =*placeholders*= directly, so i give him a corresponding function.
+     (data-to-placeholder-matcher
+      :type function
+      :initarg :data-to-placeholder-matcher
+      :initform #'does-placeholder-matches-data
+      :documentation "Function for matching data to given placeholder")
 
-#+begin_src lisp :tangle placeholders.lisp
-  (defun define-placeholder (placeholder recognition-predicate shift-function)
-    (if (gethash placeholder *placeholders*)
-        (format t "You try to redefine an existing placeholder~%")
-        (setf (gethash placeholder *placeholders*) (list recognition-predicate
-                                                         shift-function))))
-#+end_src
+     (single-values-matcher
+      :type function
+      :initarg :single-values-matcher
+      :initform #'does-a-matches-b
+      :documentation "Function for matching two single values")
 
-Since we can add placeholders, we can remove them. This functionality provided by =remove-placeholder=.
-
-#+begin_src lisp :tangle placeholders.lisp
-  (defun remove-placeholder (placeholder)
-    (if (gethash placeholder *placeholders*)
-        (remhash placeholder *placeholders*)
-        (format t "You try to remove unexisting placeholder~%")))
-#+end_src
-
-Also we can redefine placeholders, so =redefine-placeholder= do it.
-
-#+begin_src lisp :tangle placeholders.lisp
-  (defun redefine-placeholder (placeholder recognition-predicate shift-function)
-    (if (gethash placeholder *placeholders*)
-        (setf (gethash placeholder *placeholders*) (list recognition-predicate
-                                                         shift-function))
-        (format t "You try to redefine unexisting placeholder~%")))
-#+end_src
-
-** Accessors
-All placeholders logic is implemented, but for further work we need some access functions.
-
-First function in this group is a =get-recognition-predicate=, that returns recognition predicate for given placeholder.
-
-#+begin_src lisp :tangle placeholders.lisp
-  (defun get-recognition-predicate (placeholder)
-    (values (first (gethash placeholder *placeholders*)) placeholder))
-#+end_src
-
-Another function is =get-shift-function= and i think there is no need in any other words about it.
-
-#+begin_src lisp :tangle placeholders.lisp
-  (defun get-shift-function (placeholder)
-    (values (second (gethash placeholder *placeholders*)) placeholder))
-#+end_src
-
-** Predicates
-=placeholderp= is a predicate that returns =t= if given value is a placeholder.
-
-#+begin_src lisp :tangle placeholders.lisp
-  (defun placeholderp (data)
-    (if (gethash data *placeholders*)
-        t
-        nil))
-#+end_src
-
-Ok, now we have basics of placeholders and can write a function that compares some data with given placeholder (we suppose that given =placeholder= is a real placeholder).
-
-#+begin_src lisp :tangle placeholders.lisp
-  (defun does-placeholder-matches-data (placeholder data)
-    (funcall (get-recognition-predicate placeholder) data))
-#+end_src
-
-If you ask me, why this code so simple and not flexible, i give an answer: this is a temporary solution, soon i will make it more complicated.
-
-* Matching
-** Primitive matching
-Well, now we can +take chance on me+ (sorry for ABBA-speaking). Now we can describe matching mechanism. Here, we begin from the most simple function, that returns =t=, if some symbol =a= matches another symbol =b=.
-
-#+begin_src lisp :tangle matching.lisp
-  (in-package :conformist)
-
-  (defun does-a-matches-b (a b)
-    (format t "~a ~a~%" a b)
-    (if (placeholderp a)
-        (does-placeholder-matches-data a b)
-      (equal a b)))
-#+end_src
-
-As you can see this function uses =does-placeholder-matches-data= function of =a= is a placeholder, or just returns equivalence of symbols.
-
-#+begin_comment
-In this function i use =equal= because given data may be lists, and =(eql '(1 2 3) '(1 2 3))= is not =t=.
-#+end_comment
-
-** =matchp=: unsafe version
-Following code is quite ugly but this version is much faster and more lightweight. It's not the edge of optimization, but closer to it than previous code.
-
-#+begin_src lisp :tangle matching.lisp
-  (defun matchp-unsafe (pattern data)
-    (let ((pattern-index 0)
-          (data-index 0)
-          (pattern-len (length pattern))
-          (data-len (length data)))
-      (loop while (and (< pattern-index pattern-len)
-                       (< data-index data-len))
-            do
-               (let ((pattern-elm (elt pattern pattern-index))
-                     (data-elm (elt data data-index)))
-
-                 (if (listp pattern-elm)
-                     (unless (matchp-unsafe pattern-elm data-elm)
-                       (return-from matchp-unsafe nil))
-                     (unless (does-a-matches-b pattern-elm data-elm)
-                       (return-from matchp-unsafe nil)))
-
-                 (if (placeholderp pattern-elm)
-                     (setf data-index (funcall (get-shift-function pattern-elm)
-                                                 data
-                                                 data-index))
-                     (incf data-index))
-                 (incf pattern-index)))
-      t))
-#+end_src
-
-** =matchp=: safe version
-At least, i define =matchp= function, as a safe version of unsafe =mathcp=.
-
-#+begin_src lisp :tangle matching.lisp
-  (defun matchp (pattern data)
-    (if (and (listp pattern)
-             (listp data))
-        (matchp-unsafe pattern data)))
+     (complex-placeholder-matcher
+      :type function
+      :initarg :complex-placeholder-matcher
+      :initform #'match-complex-placeholder
+      :documentation "Function for matching data to complex placeholder"))
+  
+    (:documentation "Pattern system contains placeholder collection and collection-specific functions"))
 #+end_src
 
 * Examples
