@@ -34,10 +34,8 @@ Nothing interesting here at all.
     :author "Centrix14"
     :license "GNU GPL v3"
     :depends-on (:asdf)
-    :components ((:file "conformist")
-                 (:file "placeholders" :depends-on ("conformist"))
-                 (:file "matching" :depends-on ("conformist"))
-                 ))
+    :components ((:file "pattern-system")
+                 (:file "shipper" :depends-on ("pattern-system"))))
 
   (defsystem "conformist/examples"
     :description "Examples for conformist library"
