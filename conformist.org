@@ -34,13 +34,8 @@ Nothing interesting here at all.
     :author "Centrix14"
     :license "GNU GPL v3"
     :depends-on (:asdf)
-    :components ((:file "pattern-system")
-                 (:file "shipper" :depends-on ("pattern-system"))))
-
-  (defsystem "conformist/examples"
-    :description "Examples for conformist library"
-    :depends-on (:asdf :conformist)
-    :components ((:file "examples")))
+    :components ((:file "src/pattern-system")
+                 (:file "src/shipper" :depends-on ("src/pattern-system"))))
 #+end_src
 
 * =:conformist= package
@@ -49,19 +44,7 @@ Just a package description.
 #+begin_src lisp :tangle conformist.lisp
   (defpackage :conformist
     (:use :common-lisp)
-    (:export :matchp
-             :placeholderp
-             :define-placeholder
-             :redefine-placeholder
-             :remove-placeholder
-             :get-recognition-predicate
-             :get-shift-function
-             :*placeholders*))
-#+end_src
-
-#+begin_src lisp :tangle conformist.lisp
-  (defpackage :conformist-examples
-    (:use :common-lisp :conformist))
+    (:export :pattern-system :shipper))
 #+end_src
 
 * Placeholders
