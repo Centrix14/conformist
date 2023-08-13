@@ -8,16 +8,17 @@
 Conformist is a pattern matching library, that i started as a part of my future CAS.
 
 ** Features
-As a real programmer i don't present realized features, i speaking about my plans.
-1. Pattern matching for S-expression with placeholders, like =:symbol=, =:list= and another.
-2. Flexible system of placeholders.
-3. Pattern grouping.
+=conformist= provides one main function — =shipper=. This function does two things:
+1. It returns =t= if given =data= matching to =pattern=.
+2. It returns a /shippered/ list. /Shippered/ list is a list that contains all original data, but it can be one-to-one correlate to =pattern=.
 
-** What i have at the time?
-Very simple library, but soon i will expand it.
+=shipper= is a very flexible buddy. In fact, this function is just a /composer/, it provides general logic. All task-specific things can be changed. For this you must implement all necessary functions by your own and push them into instance of =pattern-system= class.
 
-* Syntax of =matchp
-=matchp= takes pattern as first argument and data for matching as second. Pattern can contain:
+** Naming
+You may be astonished by names, but don't worry, i just have a fancy mood. For example /shipper/ is from nickname of some fans that like to create ridiculous love-lines between characters of some film or book. In fact, =shipper= functions makes it: it tries to connect =pattern= and data.
+
+* Syntax of =shipper=
+=shipper= takes pattern as first argument and data for matching as second. Pattern can contain:
 1. Placeholders a special /keywords/, that describes type of symbol(s), that must be in the on position of placeholder.
 2. Concrete values.
 
@@ -268,16 +269,6 @@ Current version of =matchp= is very simple. Here is an examples of usage (all of
     (test1)
     )
 #+end_src
-
-* TODO [3/8]
-- [X] Make =*placeholders*= hash table
-- [X] Separate system to different files
-- [ ] Add error system
-- [ ] Add classes
-- [ ] Add =:lists=, =:symbols= and =:etc= placeholders
-- [X] Reduce recursion
-- [ ] Add grouping
-- [ ] Expand examples
 
 * Thoughts
 How grouping must work? Generally, grouping provide a new list, that can be one-to-one matched to given.
