@@ -52,9 +52,8 @@ Just a package description.
 Main concept of conformist is a /placeholder/. Placeholder is a _keyword_ that /holds a place/ of some value. Examples: =:symbol :list :string :integer=. Placeholders unite in /patterns/. Example: =a :math-op b= where =a= and =b= is a /concrete values/, =:math-op= — placeholder for mathematical operation (remember that conformist provides only general logic and small standard set of placeholders, =:math-op= is just an example).
 
 ** Pattern system itself
-Since library provides only general logic of pattern matching (and also a standard solution) it needs a flexible mechanism for pattern system realization. =pattern-system= class stores all functions of such pattern system. It has following members:
-- =placeholders-collection= a hashmap where key is a placeholder and value is a list with following structure: =(recognition-predicate is-simple)=. =recognition-predicate= returns =t= if his argument matches placeholder. For example, if placeholder is =:integer= then =recognition-predicate= may be =integerp=. =is-simple= is a logic value where =t= means _simple_ and =nil= means _complex_.
-
+Since library provides only general logic of pattern matching (and also a standard solution) it needs a flexible mechanism for pattern system realization. =pattern-system= class stores all functions of such pattern system. It has following definition:
+  
 #+begin_src lisp :tangle src/pattern-system.lisp
   (defclass pattern-system ()
     ((placeholders-collection
@@ -94,6 +93,24 @@ Since library provides only general logic of pattern matching (and also a standa
   
     (:documentation "Pattern system contains placeholder collection and collection-specific functions"))
 #+end_src
+
+** =placeholders-collection=
+=placeholders-collection= a hashmap where key is a placeholder and value is a list with following structure: =(recognition-predicate is-simple)=. =recognition-predicate= returns =t= if his argument matches placeholder. For example, if placeholder is =:integer= then =recognition-predicate= may be =integerp=. =is-simple= is a logic value where =t= means _simple_ and =nil= means _complex_.
+
+** =placeholder-predicate=
+=placeholder-predicate= is a predicate function that returns =t= if argument is a placeholder in current pattern system.
+
+** =simple-placeholder-predicate=
+=simple-placeholder-predicate= must be deleted.
+
+** =data-to-placeholder-matcher=
+=data-to-placeholder-matcher= is a function that returns =t= if given argument data matches given placeholder.
+
+** =single-values-matcher=
+=single-values-matcher= is a function that returns =t= if given value =b= matches to =a=.
+
+** =complex-placeholder-matcher=
+=complex-placeholder-matcher= is a function that matches and groups data to complex placeholder.
 
 * Examples
 ** Examples it self
