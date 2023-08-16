@@ -35,7 +35,10 @@ Nothing interesting here at all.
     :license "GNU GPL v3"
     :depends-on (:asdf)
     :components ((:file "src/pattern-system")
-                 (:file "src/shipper" :depends-on ("src/pattern-system"))))
+                 (:file "src/util")
+                 (:file "src/shipper" :depends-on ("src/pattern-system"
+                                                   "src/util"))
+                 (:file "src/std-collection" :depends-on ("src/util"))))
 #+end_src
 
 * =:conformist= package
@@ -97,8 +100,38 @@ Since library provides only general logic of pattern matching (and also a standa
 ** =placeholders-collection=
 =placeholders-collection= a hashmap where key is a placeholder and value is a list with following structure: =(recognition-predicate is-simple)=. =recognition-predicate= returns =t= if his argument matches placeholder. For example, if placeholder is =:integer= then =recognition-predicate= may be =integerp=. =is-simple= is a logic value where =t= means _simple_ and =nil= means _complex_.
 
+As i already said conformist has standard placeholder system. =placeholders-collection= in this system looks this way:
+#+begin_src lisp :tangle src/std-collection.lisp
+  (create-hash-table conformist-collection nil
+                     (:symbol (symbolp t))
+                     (:list (listp t))
+                     (:symbols (symbolp nil))
+                     (:lists (listp nil)))
+#+end_src
+
+From this definition (i hope) you can see:
+1. I create hash table named =conformist-collection=.
+2. Keys in this table are keywords (placeholders).
+3. Values is this table is a lists where first element is a predicate and the second element is a simplicity.
+
+For definition of =create-hash-table= please visit [[id:util:create-hash-table][this]] section.
+
 ** =placeholder-predicate=
 =placeholder-predicate= is a predicate function that returns =t= if argument is a placeholder in current pattern system.
+
+In standard pattern system this predicate defined this way:
+#+begin_src lisp :tangle src/std-collection.lisp
+  (defun placeholderp (data pattern-system)
+    (with-slots ((collection placeholders-collection)) pattern-system
+      (multiple-value-bind (value exists) (gethash data collection)
+        (declare (ignore value))
+        exists)))
+#+end_src
+
+Looks horrible? Maybe, but it not so hard to understand.
+1. I get collection placeholders.
+2. Then i use =gethash= to search for requested placeholder (=data=).
+3. Then i get second returned value (existance) and return it as a result.
 
 ** =simple-placeholder-predicate=
 =simple-placeholder-predicate= must be deleted.
@@ -111,6 +144,26 @@ Since library provides only general logic of pattern matching (and also a standa
 
 ** =complex-placeholder-matcher=
 =complex-placeholder-matcher= is a function that matches and groups data to complex placeholder.
+
+
+* Utilities
+In this section i will describe some utilities.
+
+** =create-hash-table=
+:properties:
+:id: util:create-hash-table
+:end:
+=create-hash-table= is a macro that creates variable, stores there new hash table and fills it then.
+
+Definition looks this way:
+#+begin_src lisp :tangle src/util.lisp
+  (defmacro create-hash-table (name make-args &rest values)
+    `(progn
+       (defvar ,name (make-hash-table ,@make-args))
+
+       (loop for pair in ',values do
+         (setf (gethash (first pair) ,name) (second pair)))))
+#+end_src
 
 * Examples
 ** Examples it self
