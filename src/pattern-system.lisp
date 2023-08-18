@@ -1,7 +1,11 @@
 (defclass pattern-system ()
   ((placeholders-collection
     :initarg :placeholders-collection
-    :initform conformist-collection
+    :initform (create-hash-table nil
+                                 (:symbol (symbolp t))
+                                 (:list (listp t))
+                                 (:symbols (symbolp nil))
+                                 (:lists (listp nil)))
     :documentation "Placeholders collection")
 
    (placeholder-predicate
