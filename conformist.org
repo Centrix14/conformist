@@ -97,7 +97,7 @@ Since library provides only general logic of pattern matching (and also a standa
     (:documentation "Pattern system contains placeholder collection and collection-specific functions"))
 #+end_src
 
-** =placeholders-collection=
+*** =placeholders-collection=
 =placeholders-collection= a hashmap where key is a placeholder and value is a list with following structure: =(recognition-predicate is-simple)=. =recognition-predicate= returns =t= if his argument matches placeholder. For example, if placeholder is =:integer= then =recognition-predicate= may be =integerp=. =is-simple= is a logic value where =t= means _simple_ and =nil= means _complex_.
 
 As i already said conformist has standard placeholder system. =placeholders-collection= in this system looks this way:
@@ -116,7 +116,7 @@ From this definition (i hope) you can see:
 
 For definition of =create-hash-table= please visit [[id:util:create-hash-table][this]] section.
 
-** =placeholder-predicate=
+*** =placeholder-predicate=
 =placeholder-predicate= is a predicate function that returns =t= if argument is a placeholder in current pattern system.
 
 In standard pattern system this predicate defined this way:
@@ -133,18 +133,17 @@ Looks horrible? Maybe, but it not so hard to understand.
 2. Then i use =gethash= to search for requested placeholder (=data=).
 3. Then i get second returned value (existance) and return it as a result.
 
-** =simple-placeholder-predicate=
+*** =simple-placeholder-predicate=
 =simple-placeholder-predicate= must be deleted.
 
-** =data-to-placeholder-matcher=
+*** =data-to-placeholder-matcher=
 =data-to-placeholder-matcher= is a function that returns =t= if given argument data matches given placeholder.
 
-** =single-values-matcher=
+*** =single-values-matcher=
 =single-values-matcher= is a function that returns =t= if given value =b= matches to =a=.
 
-** =complex-placeholder-matcher=
+*** =complex-placeholder-matcher=
 =complex-placeholder-matcher= is a function that matches and groups data to complex placeholder.
-
 
 * Utilities
 In this section i will describe some utilities.
