@@ -209,9 +209,9 @@ This function collects values starting and =index= in =data= until it not matche
             (if (and (listp wish)
                      (listp reality))
                 (unless (compositor wish reality pattern-system)
-                  (return-from compositor +not-matches+))
+                  (return-from compositor 'not-matches))
                 (unless (funcall matcher wish reality pattern-system)
-                  (return-from compositor +not-matches+)))
+                  (return-from compositor 'not-matches)))
 
             (when (funcall placeholder-predicate wish pattern-system)
               (when (funcall simple-predicate wish pattern-system)
@@ -247,7 +247,7 @@ This function collects values starting and =index= in =data= until it not matche
       (return-from shipper nil))
 
     (let ((raw (compositor pattern data pattern-system)))
-      (if (eql raw +not-matches+)
+      (if (eql raw 'not-matches)
           nil
           (let* ((result (reverse raw))
                  (collected (unite result)))
