@@ -100,6 +100,13 @@ Since library provides only general logic of pattern matching (and also a standa
     (:documentation "Pattern system contains placeholder collection and collection-specific functions"))
 #+end_src
 
+Also library provides standard pattern system which can be created this way:
+#+begin_src lisp
+  (make-instance 'pattern-system)
+#+end_src
+
+As you can see it's just an instance of =pattern-system= with slots by default.
+
 *** =placeholders-collection=
 =placeholders-collection= a hashmap where key is a placeholder and value is a list with following structure: =(recognition-predicate is-simple)=. =recognition-predicate= returns =t= if his argument matches placeholder. For example, if placeholder is =:integer= then =recognition-predicate= may be =integerp=. =is-simple= is a logic value where =t= means _simple_ and =nil= means _complex_.
 
