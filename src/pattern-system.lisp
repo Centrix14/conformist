@@ -1,3 +1,5 @@
+(in-package :conformist)
+
 (defclass pattern-system ()
   ((placeholders-collection
     :initarg :placeholders-collection
@@ -13,12 +15,6 @@
     :initarg :placeholder-predicate
     :initform #'placeholderp
     :documentation "Predicate for placeholder recognition")
-
-   (simple-placeholder-predicate
-    :type function
-    :initarg :simple-placeholder-predicate
-    :initform #'simplep
-    :documentation "Predicate that recognize simple placeholders")
 
    (data-to-placeholder-matcher
     :type function
