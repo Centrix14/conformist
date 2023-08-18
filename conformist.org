@@ -214,6 +214,45 @@ Definition looks this way:
        tmp))
 #+end_src
 
+** =frontier=
+It's a very simple but useful function that returns a /frontier/ — index of last element in sequence.
+
+#+begin_src lisp :tangle src/util.lisp
+  (defun frontier (sequence)
+    (1- (length sequence)))
+#+end_src
+
+** =elm=
+This is a safe version of =elt= that returns =nil= if =index= is out of range.
+
+#+begin_src lisp :tangle src/util.lisp
+  (defun elm (sequence index)
+    (if (> index (frontier sequence))
+        nil
+        (elt sequence index)))
+#+end_src
+
+** =listify=
+This function returns listified version of argument: =a -> (a), (a) -> (a)=.
+
+#+begin_src lisp :tangle src/util.lisp
+  (defun listify (value)
+    (if (listp value)
+        value
+        (list value)))
+#+end_src
+
+** =unite=
+This function just appends lists together.
+
+#+begin_src lisp :tangle src/util.lisp
+  (defun unite (sequence)
+    (reduce (lambda (x y)
+              (append (listify x)
+                      (listify y)))
+            sequence))
+#+end_src
+
 * Examples
 ** Examples it self
 Before we can use matching, we must add placeholders and function for them.
