@@ -139,11 +139,45 @@ Looks horrible? Maybe, but it not so hard to understand.
 *** =data-to-placeholder-matcher=
 =data-to-placeholder-matcher= is a function that returns =t= if given argument data matches given placeholder.
 
+Built-in version of this function looks like this:
+#+begin_src lisp :tangle src/std-collection.lisp
+  (defun does-placeholder-matches-data (placeholder data pattern-system)
+    (with-slots ((collection placeholders-collection)) pattern-system
+      (funcall (first (gethash placeholder collection)) data)))
+#+end_src
+
+It works very simple. As you know, from =placeholders-collection= slot we can extract =recognition-predicate=. So, we extract it and call with given data. That all folks!
+
 *** =single-values-matcher=
 =single-values-matcher= is a function that returns =t= if given value =b= matches to =a=.
 
+In std-collection this functionality provides =does-a-matches-b= function:
+#+begin_src lisp :tangle src/std-collection.lisp
+  (defun does-a-matches-b (a b pattern-system)
+    (with-slots (placeholder-predicate data-to-placeholder-matcher) pattern-system
+        (if (funcall placeholder-predicate a pattern-system)
+            (funcall data-to-placeholder-matcher a b pattern-system)
+            (equalp a b))))
+#+end_src
+
+This function uses following algorithm:
+1. If =a= is a placeholder then try to match placeholder to data using =data-to-placeholder-matcher=.
+2. If =a= is just a value then compare =a= and =b=.
+
 *** =complex-placeholder-matcher=
 =complex-placeholder-matcher= is a function that matches and groups data to complex placeholder.
+
+This function is kinda simple too:
+#+begin_src lisp :tangle src/std-collection.lisp
+  (defun match-complex-placeholder (data index edge-placeholder pattern-system)
+    (with-slots ((matcher single-values-matcher)) pattern-system
+      (loop for i from index to (frontier data)
+            while (not
+                   (funcall matcher edge-placeholder (elt data i) pattern-system))
+            collect (elt data i))))
+#+end_src
+
+This function collects values starting and =index= in =data= until it not matches to =edge-placeholder=.
 
 * Utilities
 In this section i will describe some utilities.
