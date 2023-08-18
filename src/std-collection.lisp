@@ -1,8 +1,4 @@
-(create-hash-table conformist-collection nil
-                   (:symbol (symbolp t))
-                   (:list (listp t))
-                   (:symbols (symbolp nil))
-                   (:lists (listp nil)))
+(in-package :conformist)
 
 (defun placeholderp (data pattern-system)
   (with-slots ((collection placeholders-collection)) pattern-system
