@@ -1,6 +1,5 @@
-(defmacro create-hash-table (name make-args &rest values)
-  `(progn
-     (defvar ,name (make-hash-table ,@make-args))
-
+(defmacro create-hash-table (make-args &rest values)
+  `(let ((tmp (make-hash-table ,@make-args)))
      (loop for pair in ',values do
-       (setf (gethash (first pair) ,name) (second pair)))))
+       (setf (gethash (first pair) tmp) (second pair)))
+     tmp))
