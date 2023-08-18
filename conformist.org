@@ -48,7 +48,7 @@ Just a package description.
 #+begin_src lisp :tangle conformist.lisp
   (defpackage :conformist
     (:use :common-lisp)
-    (:export :pattern-system))
+    (:export :pattern-system :shipper))
 #+end_src
 
 * Pattern system
