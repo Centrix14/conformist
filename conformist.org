@@ -38,7 +38,8 @@ Nothing interesting here at all.
                  (:file "src/util")
                  (:file "src/std-collection" :depends-on ("src/util"))
                  (:file "src/pattern-system" :depends-on ("src/std-collection"))
-                 ))
+                 (:file "src/compositor" :depends-on ("src/pattern-system"))
+                 (:file "src/shipper" :depends-on ("src/compositor"))))
 #+end_src
 
 * =:conformist= package definition
@@ -77,12 +78,6 @@ Since library provides only general logic of pattern matching (and also a standa
       :initarg :placeholder-predicate
       :initform #'placeholderp
       :documentation "Predicate for placeholder recognition")
-
-     (simple-placeholder-predicate
-      :type function
-      :initarg :simple-placeholder-predicate
-      :initform #'simplep
-      :documentation "Predicate that recognize simple placeholders")
 
      (data-to-placeholder-matcher
       :type function
@@ -145,9 +140,6 @@ Looks horrible? Maybe, but it not so hard to understand.
 2. Then i use =gethash= to search for requested placeholder (=data=).
 3. Then i get second returned value (existance) and return it as a result.
 
-*** =simple-placeholder-predicate=
-=simple-placeholder-predicate= must be deleted.
-
 *** =data-to-placeholder-matcher=
 =data-to-placeholder-matcher= is a function that returns =t= if given argument data matches given placeholder.
 
@@ -190,6 +182,80 @@ This function is kinda simple too:
 #+end_src
 
 This function collects values starting and =index= in =data= until it not matches to =edge-placeholder=.
+
+** Compositor
+#+begin_src lisp :tangle src/compositor.lisp
+  (in-package :conformist)
+
+  (defun compositor (pattern data pattern-system)
+    (with-slots ((simple-predicate simple-placeholder-predicate)
+                 (complex-matcher complex-placeholder-matcher)
+                 (matcher single-values-matcher)
+                 placeholder-predicate)
+        pattern-system
+
+      (let ((pattern-index 0)
+            (data-index 0)
+
+            (edge (min (length pattern)
+                       (length data)))
+
+            groups)
+
+        (loop while (< pattern-index edge) do
+          (let ((wish (elt pattern pattern-index))
+                (reality (elt data data-index)))
+
+            (if (and (listp wish)
+                     (listp reality))
+                (unless (compositor wish reality pattern-system)
+                  (return-from compositor +not-matches+))
+                (unless (funcall matcher wish reality pattern-system)
+                  (return-from compositor +not-matches+)))
+
+            (when (funcall placeholder-predicate wish pattern-system)
+              (when (funcall simple-predicate wish pattern-system)
+                (push reality groups)
+                (incf data-index))
+              (unless (funcall simple-predicate wish pattern-system)
+                (let ((matched-group
+                        (funcall complex-matcher
+                                 data
+                                 data-index
+                                 (elm pattern
+                                      (1+ pattern-index))
+                                 pattern-system)))
+                  (push matched-group groups)
+                  (incf data-index (length matched-group)))))
+
+            (unless (funcall placeholder-predicate wish pattern-system)
+              (push reality groups)
+              (incf data-index)))
+
+          (incf pattern-index))
+
+        groups)))
+#+end_src
+
+** Shipper
+#+begin_src lisp :tangle src/shipper.lisp
+  (in-package :conformist)
+
+  (defun shipper (pattern data pattern-system)
+    (when (< (length data)
+             (length pattern))
+      (return-from shipper nil))
+
+    (let ((raw (compositor pattern data pattern-system)))
+      (if (eql raw +not-matches+)
+          nil
+          (let* ((result (reverse raw))
+                 (collected (unite result)))
+            (if (or (equal result data)
+                    (equal collected data))
+                (values t result)
+                nil)))))
+#+end_src
 
 * Utilities
 In this section i will describe some utilities.
