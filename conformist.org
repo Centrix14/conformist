@@ -183,13 +183,12 @@ This function is kinda simple too:
 
 This function collects values starting and =index= in =data= until it not matches to =edge-placeholder=.
 
-** Compositor
+** TODO Compositor
 #+begin_src lisp :tangle src/compositor.lisp
   (in-package :conformist)
 
   (defun compositor (pattern data pattern-system)
-    (with-slots ((simple-predicate simple-placeholder-predicate)
-                 (complex-matcher complex-placeholder-matcher)
+    (with-slots ((complex-matcher complex-placeholder-matcher)
                  (matcher single-values-matcher)
                  placeholder-predicate)
         pattern-system
@@ -214,10 +213,10 @@ This function collects values starting and =index= in =data= until it not matche
                   (return-from compositor 'not-matches)))
 
             (when (funcall placeholder-predicate wish pattern-system)
-              (when (funcall simple-predicate wish pattern-system)
+              (when (simplep wish pattern-system)
                 (push reality groups)
                 (incf data-index))
-              (unless (funcall simple-predicate wish pattern-system)
+              (unless (simplep wish pattern-system)
                 (let ((matched-group
                         (funcall complex-matcher
                                  data
@@ -237,7 +236,7 @@ This function collects values starting and =index= in =data= until it not matche
         groups)))
 #+end_src
 
-** Shipper
+** TODO Shipper
 #+begin_src lisp :tangle src/shipper.lisp
   (in-package :conformist)
 
@@ -319,7 +318,16 @@ This function just appends lists together.
             sequence))
 #+end_src
 
-* Examples
+** =simplep=
+This function returns =is-simple= value from =placeholders-collection=.
+
+#+begin_src lisp :tangle src/util.lisp
+  (defun simplep (placeholder pattern-system)
+    (with-slots (placeholders-collection) pattern-system
+        (second (gethash placeholder placeholders-collection))))
+#+end_src
+
+* TODO Examples
 ** Examples it self
 Before we can use matching, we must add placeholders and function for them.
 
